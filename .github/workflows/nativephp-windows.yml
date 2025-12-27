@@ -10,11 +10,11 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      # 1️⃣ Checkout do código
+      # 1️⃣ Checkout
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2️⃣ PHP 8.3 + extensões obrigatórias
+      # 2️⃣ PHP 8.3 + extensões
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
@@ -22,17 +22,17 @@ jobs:
           extensions: mbstring, pdo, sqlite, openssl, fileinfo, zip
           tools: composer:v2
 
-      # 3️⃣ Node.js (recomendado pelo NativePHP/Electron)
+      # 3️⃣ Node.js 22 (compatível com Electron atual)
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 22
 
-      # 4️⃣ Dependências PHP
+      # 4️⃣ Composer
       - name: Install Composer dependencies
         run: composer install --no-dev --optimize-autoloader
 
-      # 5️⃣ Dependências JS
+      # 5️⃣ NPM
       - name: Install NPM dependencies
         run: npm install
 
@@ -40,23 +40,40 @@ jobs:
       - name: Build frontend assets
         run: npm run build
 
-      # 7️⃣ Criar .env para o build (OBRIGATÓRIO)
+      # 7️⃣ Criar .env (OBRIGATÓRIO)
       - name: Prepare environment file
         run: |
           copy .env.example .env
           php artisan key:generate
 
-      # 8️⃣ Otimizações Laravel
+      # 8️⃣ Optimize Laravel
       - name: Optimize Laravel
         run: php artisan optimize
 
-      # 9️⃣ Build NativePHP para Windows
+      # 9️⃣ Build NativePHP Windows
       - name: Build NativePHP Windows
         run: php artisan native:build win
 
-      # 🔟 Upload do instalador (.exe)
+      # 🔟 DEBUG – listar arquivos gerados
+      - name: Debug build output
+        run: |
+          echo "===== ROOT ====="
+          dir
+          echo "===== nativephp ====="
+          if exist nativephp dir nativephp
+          echo "===== nativephp\\build ====="
+          if exist nativephp\\build dir nativephp\\build
+          echo "===== build ====="
+          if exist build dir build
+          echo "===== dist ====="
+          if exist dist dir dist
+
+      # 1️⃣1️⃣ Upload do build (PATHS AMPLOS – NUNCA FALHA)
       - name: Upload Windows build artifact
         uses: actions/upload-artifact@v4
         with:
           name: nativephp-windows-build
-          path: dist/**
+          path: |
+            nativephp/**
+            build/**
+            dist/**
