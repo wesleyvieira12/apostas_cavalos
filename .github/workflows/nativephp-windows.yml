@@ -2,7 +2,7 @@ name: Build NativePHP Windows
 
 on:
   push:
-    branches: [ main ]
+    branches: [ master ]
   workflow_dispatch:
 
 jobs:
@@ -10,11 +10,11 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      # 1. Baixar código
+      # 1️⃣ Checkout do código
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2. PHP
+      # 2️⃣ PHP 8.3 + extensões obrigatórias
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
@@ -22,34 +22,40 @@ jobs:
           extensions: mbstring, pdo, sqlite, openssl, fileinfo, zip
           tools: composer:v2
 
-      # 3. Node.js
+      # 3️⃣ Node.js (recomendado pelo NativePHP/Electron)
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
 
-      # 4. Composer
+      # 4️⃣ Dependências PHP
       - name: Install Composer dependencies
         run: composer install --no-dev --optimize-autoloader
 
-      # 5. NPM
+      # 5️⃣ Dependências JS
       - name: Install NPM dependencies
         run: npm install
 
-      # 6. Build frontend (Vite)
-      - name: Build assets
+      # 6️⃣ Build frontend (Vite)
+      - name: Build frontend assets
         run: npm run build
 
-      # 7. Otimizações Laravel
+      # 7️⃣ Criar .env para o build (OBRIGATÓRIO)
+      - name: Prepare environment file
+        run: |
+          copy .env.example .env
+          php artisan key:generate
+
+      # 8️⃣ Otimizações Laravel
       - name: Optimize Laravel
         run: php artisan optimize
 
-      # 8. Build NativePHP (Windows)
+      # 9️⃣ Build NativePHP para Windows
       - name: Build NativePHP Windows
         run: php artisan native:build win
 
-      # 9. Upload do executável
-      - name: Upload Windows build
+      # 🔟 Upload do instalador (.exe)
+      - name: Upload Windows build artifact
         uses: actions/upload-artifact@v4
         with:
           name: nativephp-windows-build
