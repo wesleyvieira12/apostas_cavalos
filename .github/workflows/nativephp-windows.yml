@@ -2,7 +2,7 @@ name: Build NativePHP Windows
 
 on:
   push:
-    branches: [ master ]
+    branches: [ main ]
   workflow_dispatch:
 
 jobs:
@@ -22,7 +22,7 @@ jobs:
           extensions: mbstring, pdo, sqlite, openssl, fileinfo, zip
           tools: composer:v2
 
-      # 3️⃣ Node.js 22 (compatível com Electron atual)
+      # 3️⃣ Node.js 22
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
@@ -36,14 +36,14 @@ jobs:
       - name: Install NPM dependencies
         run: npm install
 
-      # 6️⃣ Build frontend (Vite)
+      # 6️⃣ Build frontend
       - name: Build frontend assets
         run: npm run build
 
-      # 7️⃣ Criar .env (OBRIGATÓRIO)
+      # 7️⃣ Criar .env
       - name: Prepare environment file
         run: |
-          copy .env.example .env
+          Copy-Item .env.example .env
           php artisan key:generate
 
       # 8️⃣ Optimize Laravel
@@ -54,21 +54,29 @@ jobs:
       - name: Build NativePHP Windows
         run: php artisan native:build win
 
-      # 🔟 DEBUG – listar arquivos gerados
+      # 🔟 DEBUG – PowerShell CORRETO
       - name: Debug build output
+        shell: powershell
         run: |
-          echo "===== ROOT ====="
-          dir
-          echo "===== nativephp ====="
-          if exist nativephp dir nativephp
-          echo "===== nativephp\\build ====="
-          if exist nativephp\\build dir nativephp\\build
-          echo "===== build ====="
-          if exist build dir build
-          echo "===== dist ====="
-          if exist dist dir dist
+          Write-Host "===== ROOT ====="
+          Get-ChildItem
 
-      # 1️⃣1️⃣ Upload do build (PATHS AMPLOS – NUNCA FALHA)
+          if (Test-Path nativephp) {
+            Write-Host "===== nativephp ====="
+            Get-ChildItem nativephp -Recurse
+          }
+
+          if (Test-Path build) {
+            Write-Host "===== build ====="
+            Get-ChildItem build -Recurse
+          }
+
+          if (Test-Path dist) {
+            Write-Host "===== dist ====="
+            Get-ChildItem dist -Recurse
+          }
+
+      # 1️⃣1️⃣ Upload (paths amplos)
       - name: Upload Windows build artifact
         uses: actions/upload-artifact@v4
         with:
