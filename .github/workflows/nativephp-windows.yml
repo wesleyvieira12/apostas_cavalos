@@ -1,0 +1,56 @@
+name: Build NativePHP Windows
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      # 1. Baixar código
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2. PHP
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, pdo, sqlite, openssl
+          tools: composer:v2
+
+      # 3. Node.js
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # 4. Composer
+      - name: Install Composer dependencies
+        run: composer install --no-dev --optimize-autoloader
+
+      # 5. NPM
+      - name: Install NPM dependencies
+        run: npm install
+
+      # 6. Build frontend (Vite)
+      - name: Build assets
+        run: npm run build
+
+      # 7. Otimizações Laravel
+      - name: Optimize Laravel
+        run: php artisan optimize
+
+      # 8. Build NativePHP (Windows)
+      - name: Build NativePHP Windows
+        run: php artisan native:build win
+
+      # 9. Upload do executável
+      - name: Upload Windows build
+        uses: actions/upload-artifact@v4
+        with:
+          name: nativephp-windows-build
+          path: dist/**
