@@ -140,12 +140,26 @@
                                     Taxa: {{ number_format($corridaSelecionada->taxa, 2, ',', '.') }}%
                                 </p>
                             </div>
-                            <a 
-                                href="{{ route('home') }}" 
-                                class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors"
-                            >
-                                Voltar
-                            </a>
+                            <div class="flex gap-2">
+                                @if($corridaSelecionada->apostas->count() > 0)
+                                    <a 
+                                        href="{{ route('relatorios.imprimir.todos', $corridaSelecionada->id) }}" 
+                                        target="_blank"
+                                        class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
+                                    >
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
+                                        </svg>
+                                        Imprimir Todos
+                                    </a>
+                                @endif
+                                <a 
+                                    href="{{ route('home') }}" 
+                                    class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors"
+                                >
+                                    Voltar
+                                </a>
+                            </div>
                         </div>
                     </div>
 
@@ -238,6 +252,37 @@
                             </div>
                         </form>
                     </div>
+
+                    <!-- Seção de Relatórios -->
+                    @if($corridaSelecionada->apostas->count() > 0)
+                        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+                            <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-4">Relatórios e Impressões</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                                @php
+                                    $apostadoresUnicos = $corridaSelecionada->apostas->map(function($aposta) {
+                                        return $aposta->apostador;
+                                    })->unique('id')->values();
+                                @endphp
+                                @foreach($apostadoresUnicos as $apostador)
+                                    <a 
+                                        href="{{ route('relatorios.imprimir.apostador', ['corridaId' => $corridaSelecionada->id, 'apostadorId' => $apostador->id]) }}" 
+                                        target="_blank"
+                                        class="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-blue-50 to-blue-100 dark:from-blue-900 dark:to-blue-800 border border-blue-200 dark:border-blue-700 rounded-lg hover:shadow-md transition-all"
+                                    >
+                                        <div class="flex items-center gap-3">
+                                            <svg class="w-5 h-5 text-blue-600 dark:text-blue-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
+                                            </svg>
+                                            <span class="text-sm font-medium text-gray-900 dark:text-white">{{ $apostador->nome }}</span>
+                                        </div>
+                                        <svg class="w-4 h-4 text-blue-600 dark:text-blue-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                                        </svg>
+                                    </a>
+                                @endforeach
+                            </div>
+                        </div>
+                    @endif
 
                     <!-- Lista de Apostas -->
                     <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
