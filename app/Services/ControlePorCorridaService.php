@@ -139,8 +139,10 @@ class ControlePorCorridaService
         $taxa = $corrida->taxa / 100; // Converter percentual para decimal
         $premioLiquidoRodada = ($totalValorRodada + $totalLoRodada) * (1 - $taxa);
 
+        $totalValorRodadaApostador = $apostasApostadorRodada->sum('valor');
+        $totalLoRodadaApostador = $apostasApostadorRodada->sum('lo');
         // Total apostado pelo apostador nesta rodada
-        $totalApostadoApostadorRodada = $apostasApostadorRodada->sum('valor') + $apostasApostadorRodada->sum('lo');
+        $totalApostadoApostadorRodada = $totalValorRodadaApostador + $totalLoRodadaApostador;
 
         // Processar apostas do apostador
         $apostasProcessadas = [];
@@ -177,8 +179,8 @@ class ControlePorCorridaService
         return [
             'rodada' => $rodada,
             'apostas' => $apostasProcessadas,
-            'total_valor_rodada' => $totalValorRodada,
-            'total_lo_rodada' => $totalLoRodada,
+            'total_valor_rodada' => $totalValorRodadaApostador,
+            'total_lo_rodada' => $totalLoRodadaApostador,
             'total_apostado_rodada' => $totalValorRodada + $totalLoRodada,
             'taxa_aplicada' => $corrida->taxa,
             'premio_liquido_rodada' => $premioLiquidoRodada,

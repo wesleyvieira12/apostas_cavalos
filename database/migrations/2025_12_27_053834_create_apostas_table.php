@@ -24,7 +24,7 @@ return new class extends Migration
 
             $table->integer('rodada');
             $table->integer('animal');
-            $table->decimal('valor', 10, 2);
+            $table->decimal('valor', 10, 2)->nullable();
             $table->decimal('lo', 10, 2)->nullable();
 
             $table->timestamps();

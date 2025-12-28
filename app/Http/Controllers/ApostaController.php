@@ -34,7 +34,7 @@ class ApostaController extends Controller
             'corrida_id' => 'required|exists:corridas,id',
             'rodada' => 'required|integer|min:1',
             'animal' => 'required|integer|min:1',
-            'valor' => 'required|numeric|min:0.01',
+            'valor' => 'nullable|numeric|min:0',
             'lo' => 'nullable|numeric|min:0',
         ]);
         
@@ -72,6 +72,7 @@ class ApostaController extends Controller
      */
     public function destroy(Aposta $aposta)
     {
-        //
+        $aposta->delete();
+        return redirect()->route('home', ['corrida_id' => $aposta->corrida_id])->with('success', 'Aposta deletada com sucesso!');
     }
 }

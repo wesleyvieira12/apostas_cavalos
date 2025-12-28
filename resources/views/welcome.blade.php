@@ -221,13 +221,12 @@
                                     </div>
                                     
                                     <div>
-                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Valor (R$) *</label>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Valor (R$)</label>
                                         <input 
                                             type="number" 
                                             name="valor" 
                                             step="0.01"
-                                            required
-                                            min="0.01"
+                                            min="0"
                                             class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
                                         >
                                     </div>
@@ -297,6 +296,7 @@
                                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Animal</th>
                                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Valor</th>
                                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">LO</th>
+                                            <th></th>
                                         </tr>
                                     </thead>
                                     <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
@@ -316,6 +316,18 @@
                                                 </td>
                                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                                                     R$ {{ number_format($aposta->lo, 2, ',', '.') }}
+                                                </td>
+                                                <td>
+                                                <form id="delete-form-aposta-{{ $aposta->id }}" action="{{ route('apostas.destroy', $aposta->id) }}" method="POST" style="display: none;">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                </form>
+                                                <a 
+                                                    class="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300 font-medium cursor-pointer"
+                                                    onclick="event.preventDefault(); if (confirm('Tem certeza que deseja deletar esta aposta?')) { document.getElementById('delete-form-aposta-{{ $aposta->id }}').submit(); }"
+                                                >
+                                                    Deletar
+                                                </a>
                                                 </td>
                                             </tr>
                                         @endforeach
