@@ -32,12 +32,15 @@ class ControlePorCorridaService
         // Processar cada apostador
         foreach ($apostasPorApostador as $apostadorId => $apostasApostador) {
             $apostador = $apostasApostador->first()->apostador;
+
+            $premiosPorAnimal = $this->calculaPremiosPorAnimal($corrida, $apostasApostador, $apostas);
             
             // Agrupar apostas por rodada
             $apostasPorRodada = $apostasApostador->groupBy('rodada');
 
             $rodadasProcessadas = [];
-            $totalApostadoApostador = 0;
+            $totalValorApostador = 0;
+            $totalLoApostador = 0;
             $totalRecebidoApostador = 0;
 
             // Processar cada rodada do apostador
@@ -50,8 +53,9 @@ class ControlePorCorridaService
                 );
 
                 $rodadasProcessadas[] = $dadosRodada;
-                $totalApostadoApostador += $dadosRodada['total_apostado_rodada_apostador'];
-                $totalRecebidoApostador += $dadosRodada['premio_recebido'];
+
+                $totalValorApostador += $dadosRodada['total_valor_rodada'];
+                $totalLoApostador += $dadosRodada['total_lo_rodada'];
             }
 
             $resultado[] = [
@@ -60,14 +64,56 @@ class ControlePorCorridaService
                     'nome' => $apostador->nome,
                 ],
                 'rodadas' => $rodadasProcessadas,
+                'premios_por_animal' => $premiosPorAnimal,
                 'totais' => [
-                    'total_apostado' => $totalApostadoApostador,
-                    'total_recebido' => $totalRecebidoApostador,
+                    'total_valor_apostador' => $totalValorApostador,
+                    'total_lo_apostador' => $totalLoApostador,
+                    'total_geral_apostador' => $totalValorApostador + $totalLoApostador,
                 ],
             ];
         }
 
         return $resultado;
+    }
+
+    public function calculaPremiosPorAnimal($corrida, $apostasApostador, $todasApostas)
+    {
+        $premios = [];
+        
+
+        foreach($apostasApostador as $aposta){
+
+            $premioAposta = 0;
+
+            $todasApostasRodada = $todasApostas->where('rodada', $aposta->rodada);
+
+            $totalValorRodada = $todasApostasRodada->sum('valor');
+            $totalLoRodada = $todasApostasRodada->sum('lo');
+
+            // Aplicar taxa da corrida
+            $taxa = $corrida->taxa / 100; // Converter percentual para decimal
+            $premioLiquidoRodada = ($totalValorRodada + $totalLoRodada) * (1 - $taxa);
+
+            // Calcular total apostado no animal vencedor (todos os apostadores)
+            $totalApostadoAnimal = 
+                $todasApostasRodada->where('animal', $aposta->animal)->sum('valor') + 
+                $todasApostasRodada->where('animal', $aposta->animal)->sum('lo');
+
+        
+
+            // Rateio proporcional
+            if ($totalApostadoAnimal > 0) {
+                $proporcao = ($aposta->lo + $aposta->valor) / $totalApostadoAnimal;
+                $premioAposta = $premioLiquidoRodada * $proporcao;
+            }
+
+            $premios[$aposta->animal] = 
+                array_key_exists($aposta->animal, $premios) 
+                ? $premios[$aposta->animal] + $premioAposta 
+                : $premioAposta;
+        }        
+
+        return $premios;
     }
 
     /**
@@ -86,18 +132,19 @@ class ControlePorCorridaService
         Collection $todasApostasRodada
     ): array {
         // Calcular total apostado na rodada (todos os apostadores)
-        $totalRodada = $todasApostasRodada->sum('valor');
+        $totalValorRodada = $todasApostasRodada->sum('valor');
         $totalLoRodada = $todasApostasRodada->sum('lo');
 
         // Aplicar taxa da corrida
         $taxa = $corrida->taxa / 100; // Converter percentual para decimal
-        $premioLiquidoRodada = ($totalRodada + $totalLoRodada) * (1 - $taxa);
+        $premioLiquidoRodada = ($totalValorRodada + $totalLoRodada) * (1 - $taxa);
 
         // Total apostado pelo apostador nesta rodada
         $totalApostadoApostadorRodada = $apostasApostadorRodada->sum('valor') + $apostasApostadorRodada->sum('lo');
 
         // Processar apostas do apostador
         $apostasProcessadas = [];
+        $premiosPorAnimal = [];
         $premioRecebidoRodada = 0;
 
         foreach ($apostasApostadorRodada as $aposta) {
@@ -123,18 +170,21 @@ class ControlePorCorridaService
                 'lo' => $aposta->lo,
                 'premio' => $premioAposta
             ];
-
+            
             $premioRecebidoRodada += $premioAposta;
         }
 
         return [
             'rodada' => $rodada,
             'apostas' => $apostasProcessadas,
-            'total_apostado_rodada' => $totalRodada + $totalLoRodada,
+            'total_valor_rodada' => $totalValorRodada,
+            'total_lo_rodada' => $totalLoRodada,
+            'total_apostado_rodada' => $totalValorRodada + $totalLoRodada,
             'taxa_aplicada' => $corrida->taxa,
             'premio_liquido_rodada' => $premioLiquidoRodada,
             'total_apostado_rodada_apostador' => $totalApostadoApostadorRodada,
-            'premio_recebido' => $premioRecebidoRodada
+            'premio_recebido' => $premioRecebidoRodada,
+            'premios_por_animal' => $premiosPorAnimal
         ];
     }
 

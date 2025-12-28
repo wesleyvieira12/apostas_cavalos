@@ -37,7 +37,7 @@ class ApostaController extends Controller
             'valor' => 'required|numeric|min:0.01',
             'lo' => 'nullable|numeric|min:0',
         ]);
-
+        
         Aposta::create($validated);
 
         return redirect()->route('home', ['corrida_id' => $validated['corrida_id']])->with('success', 'Aposta criada com sucesso!');
