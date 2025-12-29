@@ -72,7 +72,8 @@ class CorridaController extends Controller
      */
     public function edit(Corrida $corrida)
     {
-        //
+        // A edição é feita via modal na página principal
+        return redirect()->route('home');
     }
 
     /**
@@ -80,7 +81,15 @@ class CorridaController extends Controller
      */
     public function update(Request $request, Corrida $corrida)
     {
-        //
+        $validated = $request->validate([
+            'nome' => 'required|string|max:255',
+            'data' => 'required|date',
+            'taxa' => 'required|numeric|min:0|max:100',
+        ]);
+
+        $corrida->update($validated);
+
+        return redirect()->route('home')->with('success', 'Corrida atualizada com sucesso!');
     }
 
     /**

@@ -34,6 +34,11 @@ class ApostadorController extends Controller
             'corrida_id' => 'required|exists:corridas,id',
         ]);
 
+        $jaExiste = Apostador::where('nome', $validated['nome'])->where('corrida_id', $validated['corrida_id'])->first();
+        if ($jaExiste) {
+            return redirect()->back()->with('error', 'Apostador já existe para esta corrida!');
+        }
+
         $apostador = Apostador::create($validated);
 
         // Se for requisição AJAX, retorna JSON

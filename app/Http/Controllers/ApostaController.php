@@ -64,7 +64,18 @@ class ApostaController extends Controller
      */
     public function update(Request $request, Aposta $aposta)
     {
-        //
+        $validated = $request->validate([
+            'apostador_id' => 'required|exists:apostadores,id',
+            'corrida_id' => 'required|exists:corridas,id',
+            'rodada' => 'required|integer|min:1',
+            'animal' => 'required|integer|min:1',
+            'valor' => 'nullable|numeric|min:0',
+            'lo' => 'nullable|numeric|min:0',
+        ]);
+        
+        $aposta->update($validated);
+
+        return redirect()->route('home', ['corrida_id' => $validated['corrida_id']])->with('success', 'Aposta atualizada com sucesso!');
     }
 
     /**
