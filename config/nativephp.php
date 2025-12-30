@@ -158,7 +158,18 @@ return [
     ],
 
     'postbuild' => [
-        // 'rm -rf public/build',
+        // Garantir que NATIVEPHP_RUNNING esteja no .env do build final
+        'php -r "' .
+        '$envPath = \'build/app/.env\'; ' .
+        'if (file_exists($envPath)) { ' .
+        '$envContent = file_get_contents($envPath); ' .
+        'if (strpos($envContent, \'NATIVEPHP_RUNNING\') === false) { ' .
+        'file_put_contents($envPath, PHP_EOL . \'NATIVEPHP_RUNNING=true\' . PHP_EOL, FILE_APPEND); ' .
+        'echo \'Added NATIVEPHP_RUNNING=true to .env\' . PHP_EOL; ' .
+        '} else { ' .
+        'echo \'NATIVEPHP_RUNNING already exists in .env\' . PHP_EOL; ' .
+        '} ' .
+        '}"',
     ],
 
     /**

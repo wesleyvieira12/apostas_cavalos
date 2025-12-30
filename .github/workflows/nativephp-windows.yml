@@ -48,7 +48,8 @@ jobs:
           php artisan key:generate
           
           # Adicionar configurações do NativePHP ao .env
-          Add-Content .env "`nNATIVEPHP_APP_ID=com.apostas.cavalo.app"
+          Add-Content .env "`nNATIVEPHP_RUNNING=true"
+          Add-Content .env "NATIVEPHP_APP_ID=com.apostas.cavalo.app"
           Add-Content .env "NATIVEPHP_APP_VERSION=1.0.2"
           Add-Content .env "NATIVEPHP_APP_AUTHOR='Sistema Apostas'"
           Add-Content .env "NATIVEPHP_APP_DESCRIPTION='Sistema de Apostas de Cavalos'"
@@ -63,11 +64,7 @@ jobs:
           php artisan cache:clear
           php artisan native:install --force
 
-      # 9️⃣ Optimize Laravel
-      - name: Optimize Laravel
-        run: php artisan optimize
-
-      # 🔟 Build NativePHP Windows
+      # 9️⃣ Build NativePHP Windows
       - name: Build NativePHP Windows
         run: php artisan native:build win
 
