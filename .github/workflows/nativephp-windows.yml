@@ -50,8 +50,8 @@ jobs:
           # Adicionar configurações do NativePHP ao .env
           Add-Content .env "`nNATIVEPHP_APP_ID=com.apostas.cavalo.app"
           Add-Content .env "NATIVEPHP_APP_VERSION=1.0.2"
-          Add-Content .env "NATIVEPHP_APP_AUTHOR=Sistema Apostas"
-          Add-Content .env "NATIVEPHP_APP_DESCRIPTION=Sistema de Apostas de Cavalos"
+          Add-Content .env "NATIVEPHP_APP_AUTHOR='Sistema Apostas'"
+          Add-Content .env "NATIVEPHP_APP_DESCRIPTION='Sistema de Apostas de Cavalos'"
           
           Write-Host "=== .env criado com sucesso ==="
           Get-Content .env
