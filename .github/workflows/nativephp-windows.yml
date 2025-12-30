@@ -40,21 +40,38 @@ jobs:
       - name: Build frontend assets
         run: npm run build
 
-      # 7️⃣ Criar .env
+      # 7️⃣ Criar .env e configurar NativePHP
       - name: Prepare environment file
+        shell: powershell
         run: |
           Copy-Item .env.example .env
           php artisan key:generate
+          
+          # Adicionar configurações do NativePHP ao .env
+          Add-Content .env "`nNATIVEPHP_APP_ID=com.apostas.cavalo.app"
+          Add-Content .env "NATIVEPHP_APP_VERSION=1.0.2"
+          Add-Content .env "NATIVEPHP_APP_AUTHOR=Sistema Apostas"
+          Add-Content .env "NATIVEPHP_APP_DESCRIPTION=Sistema de Apostas de Cavalos"
+          
+          Write-Host "=== .env criado com sucesso ==="
+          Get-Content .env
 
-      # 8️⃣ Optimize Laravel
+      # 8️⃣ Limpar cache e preparar NativePHP
+      - name: Prepare NativePHP
+        run: |
+          php artisan config:clear
+          php artisan cache:clear
+          php artisan native:install --force
+
+      # 9️⃣ Optimize Laravel
       - name: Optimize Laravel
         run: php artisan optimize
 
-      # 9️⃣ Build NativePHP Windows
+      # 🔟 Build NativePHP Windows
       - name: Build NativePHP Windows
         run: php artisan native:build win
 
-      # 🔟 DEBUG – PowerShell CORRETO
+      # 1️⃣1️⃣ DEBUG – PowerShell CORRETO
       - name: Debug build output
         shell: powershell
         run: |
@@ -76,7 +93,7 @@ jobs:
             Get-ChildItem dist -Recurse
           }
 
-      # 1️⃣1️⃣ Upload (paths amplos)
+      # 1️⃣2️⃣ Upload (paths amplos)
       - name: Upload Windows build artifact
         uses: actions/upload-artifact@v4
         with:
