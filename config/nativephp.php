@@ -97,7 +97,7 @@ return [
          * updater will only work when your application is bundled
          * for production.
          */
-        'enabled' => env('NATIVEPHP_UPDATER_ENABLED', true),
+        'enabled' => env('NATIVEPHP_UPDATER_ENABLED', false),
 
         /**
          * The updater provider to use.
@@ -158,17 +158,35 @@ return [
     ],
 
     'postbuild' => [
-        // Garantir que NATIVEPHP_RUNNING esteja no .env do build final
+        // Garantir que variáveis críticas estejam no .env do build final
         'php -r "' .
-        '$envPath = \'build/app/.env\'; ' .
-        'if (file_exists($envPath)) { ' .
-        '$envContent = file_get_contents($envPath); ' .
-        'if (strpos($envContent, \'NATIVEPHP_RUNNING\') === false) { ' .
-        'file_put_contents($envPath, PHP_EOL . \'NATIVEPHP_RUNNING=true\' . PHP_EOL, FILE_APPEND); ' .
-        'echo \'Added NATIVEPHP_RUNNING=true to .env\' . PHP_EOL; ' .
-        '} else { ' .
-        'echo \'NATIVEPHP_RUNNING already exists in .env\' . PHP_EOL; ' .
+        '$sourceEnv = \'.env\'; ' .
+        '$buildEnv = \'build/app/.env\'; ' .
+        'if (file_exists($sourceEnv) && file_exists($buildEnv)) { ' .
+        // Ler APP_KEY do .env original
+        '$sourceContent = file_get_contents($sourceEnv); ' .
+        'preg_match(\'/APP_KEY=(.*)/\', $sourceContent, $matches); ' .
+        '$appKey = $matches[1] ?? \'\'; ' .
+        // Ler conteúdo do build
+        '$buildContent = file_get_contents($buildEnv); ' .
+        // Adicionar NATIVEPHP_RUNNING se não existir
+        'if (strpos($buildContent, \'NATIVEPHP_RUNNING\') === false) { ' .
+        '$buildContent .= PHP_EOL . \'NATIVEPHP_RUNNING=true\'; ' .
+        'echo \'Added NATIVEPHP_RUNNING=true\' . PHP_EOL; ' .
         '} ' .
+        // Adicionar ou atualizar APP_KEY
+        'if (!empty($appKey)) { ' .
+        'if (strpos($buildContent, \'APP_KEY=\') !== false) { ' .
+        '$buildContent = preg_replace(\'/APP_KEY=(.*)/\', \'APP_KEY=\' . $appKey, $buildContent); ' .
+        'echo \'Updated APP_KEY\' . PHP_EOL; ' .
+        '} else { ' .
+        '$buildContent .= PHP_EOL . \'APP_KEY=\' . $appKey; ' .
+        'echo \'Added APP_KEY\' . PHP_EOL; ' .
+        '} ' .
+        '} ' .
+        // Salvar
+        'file_put_contents($buildEnv, $buildContent); ' .
+        'echo \'Environment file updated successfully\' . PHP_EOL; ' .
         '}"',
     ],
 
