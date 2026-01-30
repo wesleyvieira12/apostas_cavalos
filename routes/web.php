@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', [App\Http\Controllers\CorridaController::class, 'index'])->name('home');
 
+Route::get('/apostadores/buscar', [ApostadorController::class, 'buscar'])->name('apostadores.buscar');
 Route::resource('apostadores', ApostadorController::class);
 Route::resource('corridas', CorridaController::class);
 Route::resource('apostas', ApostaController::class);

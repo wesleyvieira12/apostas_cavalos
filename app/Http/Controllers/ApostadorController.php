@@ -17,6 +17,27 @@ class ApostadorController extends Controller
     }
 
     /**
+     * Busca apostadores por corrida (e opcionalmente por termo no nome). Retorna JSON para o select.
+     */
+    public function buscar(Request $request)
+    {
+        $request->validate([
+            'corrida_id' => 'required|exists:corridas,id',
+            'search' => 'nullable|string|max:255',
+        ]);
+
+        $apostadores = Apostador::where('corrida_id', $request->corrida_id)
+            ->when($request->filled('search'), function ($query) use ($request) {
+                $termo = $request->search;
+                $query->where('nome', 'like', '%' . $termo . '%');
+            })
+            ->orderBy('nome')
+            ->get(['id', 'nome']);
+
+        return response()->json($apostadores);
+    }
+
+    /**
      * Show the form for creating a new resource.
      */
     public function create()
@@ -36,13 +57,17 @@ class ApostadorController extends Controller
 
         $jaExiste = Apostador::where('nome', $validated['nome'])->where('corrida_id', $validated['corrida_id'])->first();
         if ($jaExiste) {
-            return redirect()->back()->with('error', 'Apostador já existe para esta corrida!');
+            $mensagem = 'Já existe um apostador com esse nome nesta corrida.';
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => $mensagem], 422);
+            }
+            return redirect()->back()->with('error', $mensagem);
         }
 
         $apostador = Apostador::create($validated);
 
         // Se for requisição AJAX, retorna JSON
-        if ($request->ajax()) {
+        if ($request->ajax() || $request->wantsJson()) {
             return response()->json([
                 'success' => true,
                 'apostador' => [

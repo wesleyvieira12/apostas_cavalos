@@ -459,6 +459,7 @@
                                         class="btn-editar-aposta text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300 font-medium"
                                         data-aposta-id="{{ $aposta->id }}"
                                         data-aposta-apostador-id="{{ $aposta->apostador_id }}"
+                                        data-aposta-apostador-nome="{{ $aposta->apostador->nome ?? '' }}"
                                         data-aposta-rodada="{{ $aposta->rodada }}"
                                         data-aposta-animal="{{ $aposta->animal }}"
                                         data-aposta-valor="{{ $aposta->valor }}"
@@ -646,8 +647,7 @@
                                         id="search-apostador"
                                         placeholder="Selecione ou busque um apostador..."
                                         autocomplete="off"
-                                        readonly
-                                        class="w-full px-4 py-2 pr-8 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white cursor-pointer">
+                                        class="w-full px-4 py-2 pr-8 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white">
                                     <svg class="absolute right-3 top-3 h-5 w-5 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                                     </svg>
@@ -658,13 +658,6 @@
                                     required
                                     class="hidden">
                                     <option value="">Selecione um apostador</option>
-                                    @if(isset($apostadores) && $apostadores instanceof \Illuminate\Support\Collection)
-                                        @foreach($apostadores as $apostador)
-                                            @if(is_object($apostador) && isset($apostador->id))
-                                            <option value="{{ $apostador->id }}">{{ $apostador->nome }}</option>
-                                            @endif
-                                        @endforeach
-                                    @endif
                                 </select>
                                 <div id="apostadores-dropdown" class="hidden absolute z-10 w-full mt-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg">
                                     <div class="p-2 border-b border-gray-200 dark:border-gray-600">
@@ -675,16 +668,8 @@
                                             autocomplete="off"
                                             class="w-full px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-600 dark:text-white text-sm">
                                     </div>
-                                    <div class="max-h-48 overflow-y-auto">
-                                        @if(isset($apostadores) && $apostadores instanceof \Illuminate\Support\Collection)
-                                            @foreach($apostadores as $apostador)
-                                                @if(is_object($apostador) && isset($apostador->id))
-                                                <div class="apostador-option px-4 py-2 hover:bg-blue-50 dark:hover:bg-gray-600 cursor-pointer text-gray-900 dark:text-white" data-id="{{ $apostador->id }}" data-nome="{{ $apostador->nome }}">
-                                                    {{ $apostador->nome }}
-                                                </div>
-                                                @endif
-                                            @endforeach
-                                        @endif
+                                    <div id="apostadores-dropdown-list" class="max-h-48 overflow-y-auto">
+                                        <div class="px-4 py-2 text-gray-500 dark:text-gray-400 text-sm">Digite para buscar ou clique para carregar</div>
                                     </div>
                                 </div>
                             </div>
@@ -769,16 +754,27 @@
                     body: formData,
                     headers: {
                         'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json',
                         'X-CSRF-TOKEN': csrfToken
                     }
                 })
                 .then(response => {
-                    if (!response.ok) {
-                        return response.json().then(err => Promise.reject(err));
+                    const contentType = response.headers.get('content-type');
+                    if (contentType && contentType.includes('application/json')) {
+                        return response.json().then(data => ({ ok: response.ok, status: response.status, data }));
                     }
-                    return response.json();
+                    return response.text().then(text => {
+                        return Promise.reject(new Error('Resposta inválida do servidor. Tente novamente.'));
+                    });
                 })
-                .then(data => {
+                .then(({ ok, status, data }) => {
+                    if (!ok && data && data.message) {
+                        alert(data.message);
+                        return;
+                    }
+                    if (!ok) {
+                        throw new Error(data && data.message ? data.message : 'Erro ao cadastrar apostador.');
+                    }
                     if (data.success) {
                         // Adiciona ao select real
                         const novaOptionSelect = document.createElement('option');
@@ -892,11 +888,12 @@
                     e.preventDefault();
                     const id = this.dataset.apostaId;
                     const apostadorId = this.dataset.apostaApostadorId;
+                    const apostadorNome = this.dataset.apostaApostadorNome || '';
                     const rodada = this.dataset.apostaRodada;
                     const animal = this.dataset.apostaAnimal;
                     const valor = this.dataset.apostaValor;
                     const lo = this.dataset.apostaLo;
-                    abrirModalEdicaoAposta(id, apostadorId, rodada, animal, valor, lo);
+                    abrirModalEdicaoAposta(id, apostadorId, apostadorNome, rodada, animal, valor, lo);
                 });
             });
         });
@@ -920,15 +917,19 @@
             document.getElementById('modal-aposta').classList.remove('hidden');
         }
 
-        function abrirModalEdicaoAposta(id, apostadorId, rodada, animal, valor, lo) {
-            // Busca o nome do apostador no select
+        function abrirModalEdicaoAposta(id, apostadorId, apostadorNome, rodada, animal, valor, lo) {
             const selectApostador = document.getElementById('select-apostador');
-            const option = selectApostador.querySelector(`option[value="${apostadorId}"]`);
-            const apostadorNome = option ? option.textContent : '';
-
-            // Preenche os campos com os dados da aposta
-            document.getElementById('search-apostador').value = apostadorNome;
-            selectApostador.value = apostadorId;
+            // Exibe o nome no campo e garante que o select tenha a opção (lista vem da API, pode estar vazia ao editar)
+            document.getElementById('search-apostador').value = apostadorNome || '';
+            if (apostadorId) {
+                if (!selectApostador.querySelector(`option[value="${apostadorId}"]`)) {
+                    const opt = document.createElement('option');
+                    opt.value = apostadorId;
+                    opt.textContent = apostadorNome || apostadorId;
+                    selectApostador.appendChild(opt);
+                }
+                selectApostador.value = apostadorId;
+            }
             document.getElementById('aposta-rodada').value = rodada;
             document.getElementById('aposta-animal').value = animal;
             document.getElementById('aposta-valor').value = valor;
@@ -956,53 +957,124 @@
             document.getElementById('apostadores-dropdown').classList.add('hidden');
         }
 
-        // Sistema de select com busca integrada
+        // Sistema de select com busca via API (rota apostadores.buscar)
         const searchApostador = document.getElementById('search-apostador');
         const selectApostador = document.getElementById('select-apostador');
         const apostadoresDropdown = document.getElementById('apostadores-dropdown');
         const filterApostador = document.getElementById('filter-apostador');
-        const apostadorOptions = document.querySelectorAll('.apostador-option');
+        const apostadoresDropdownList = document.getElementById('apostadores-dropdown-list');
+        const urlBuscarApostadores = '{{ route("apostadores.buscar") }}';
 
-        if (searchApostador && selectApostador) {
-            // Clique no campo para abrir/fechar dropdown
-            searchApostador.addEventListener('click', function() {
-                apostadoresDropdown.classList.toggle('hidden');
-                if (!apostadoresDropdown.classList.contains('hidden')) {
-                    filterApostador.value = '';
-                    apostadorOptions.forEach(opt => opt.style.display = 'block');
-                    setTimeout(() => filterApostador.focus(), 100);
+        function getCorridaId() {
+            const input = document.querySelector('#form-aposta input[name="corrida_id"]');
+            return input ? input.value : '';
+        }
+
+        function preencheSelectApostadores(apostadores) {
+            if (!selectApostador || !apostadoresDropdownList) return;
+            const valorAtual = selectApostador.value;
+            selectApostador.innerHTML = '<option value="">Selecione um apostador</option>';
+            apostadores.forEach(function(a) {
+                const opt = document.createElement('option');
+                opt.value = a.id;
+                opt.textContent = a.nome;
+                selectApostador.appendChild(opt);
+            });
+            apostadoresDropdownList.innerHTML = '';
+            if (apostadores.length === 0) {
+                const msg = document.createElement('div');
+                msg.className = 'px-4 py-2 text-gray-500 dark:text-gray-400 text-sm';
+                msg.textContent = 'Nenhum apostador encontrado.';
+                apostadoresDropdownList.appendChild(msg);
+            } else {
+                apostadores.forEach(function(a) {
+                    const div = document.createElement('div');
+                    div.className = 'apostador-option px-4 py-2 hover:bg-blue-50 dark:hover:bg-gray-600 cursor-pointer text-gray-900 dark:text-white';
+                    div.dataset.id = a.id;
+                    div.dataset.nome = a.nome;
+                    div.textContent = a.nome;
+                    apostadoresDropdownList.appendChild(div);
+                });
+            }
+            if (valorAtual && apostadores.some(function(a) { return String(a.id) === valorAtual; })) {
+                selectApostador.value = valorAtual;
+            }
+        }
+
+        function buscarApostadores(termo) {
+            const corridaId = getCorridaId();
+            if (!corridaId) {
+                if (apostadoresDropdownList) {
+                    apostadoresDropdownList.innerHTML = '<div class="px-4 py-2 text-gray-500 dark:text-gray-400 text-sm">Selecione uma corrida.</div>';
+                }
+                return;
+            }
+            if (apostadoresDropdownList) {
+                apostadoresDropdownList.innerHTML = '<div class="px-4 py-2 text-gray-500 dark:text-gray-400 text-sm">Carregando...</div>';
+            }
+            const params = new URLSearchParams({ corrida_id: corridaId });
+            if (termo && termo.trim()) params.set('search', termo.trim());
+            fetch(urlBuscarApostadores + '?' + params.toString(), {
+                method: 'GET',
+                headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                preencheSelectApostadores(Array.isArray(data) ? data : []);
+            })
+            .catch(function() {
+                if (apostadoresDropdownList) {
+                    apostadoresDropdownList.innerHTML = '<div class="px-4 py-2 text-red-500 dark:text-red-400 text-sm">Erro ao carregar. Tente novamente.</div>';
+                }
+                preencheSelectApostadores([]);
+            });
+        }
+
+        var debounceBuscarApostadores = (function() {
+            var timer;
+            return function(termo) {
+                clearTimeout(timer);
+                timer = setTimeout(function() { buscarApostadores(termo); }, 280);
+            };
+        })();
+
+        function abrirDropdownApostador() {
+            apostadoresDropdown.classList.remove('hidden');
+            filterApostador.value = searchApostador.value;
+            buscarApostadores(searchApostador.value);
+        }
+
+        if (searchApostador && selectApostador && apostadoresDropdown && filterApostador) {
+            searchApostador.addEventListener('click', function(e) {
+                e.stopPropagation();
+                abrirDropdownApostador();
+            });
+            searchApostador.addEventListener('focus', function() {
+                abrirDropdownApostador();
+            });
+
+            searchApostador.addEventListener('input', function() {
+                apostadoresDropdown.classList.remove('hidden');
+                filterApostador.value = this.value;
+                if (!this.value.trim()) selectApostador.value = '';
+                debounceBuscarApostadores(this.value);
+            });
+
+            filterApostador.addEventListener('input', function() {
+                searchApostador.value = this.value;
+                debounceBuscarApostadores(this.value);
+            });
+            filterApostador.addEventListener('click', function(e) { e.stopPropagation(); });
+
+            apostadoresDropdown.addEventListener('click', function(e) {
+                const option = e.target.closest('.apostador-option');
+                if (option) {
+                    searchApostador.value = option.dataset.nome || option.textContent.trim();
+                    selectApostador.value = option.dataset.id;
+                    apostadoresDropdown.classList.add('hidden');
                 }
             });
 
-            // Filtro de busca
-            filterApostador.addEventListener('input', function() {
-                const searchTerm = this.value.toLowerCase();
-
-                apostadorOptions.forEach(function(option) {
-                    const nome = option.dataset.nome.toLowerCase();
-                    if (nome.includes(searchTerm)) {
-                        option.style.display = 'block';
-                    } else {
-                        option.style.display = 'none';
-                    }
-                });
-            });
-
-            // Previne o dropdown de fechar quando clicar no campo de busca
-            filterApostador.addEventListener('click', function(e) {
-                e.stopPropagation();
-            });
-
-            // Clique nas opções
-            apostadorOptions.forEach(function(option) {
-                option.addEventListener('click', function() {
-                    searchApostador.value = this.dataset.nome;
-                    selectApostador.value = this.dataset.id;
-                    apostadoresDropdown.classList.add('hidden');
-                });
-            });
-
-            // Fecha o dropdown ao clicar fora
             document.addEventListener('click', function(e) {
                 if (!searchApostador.contains(e.target) && !apostadoresDropdown.contains(e.target)) {
                     apostadoresDropdown.classList.add('hidden');
