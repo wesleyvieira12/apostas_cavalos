@@ -21,10 +21,59 @@
 
 <body class="bg-gray-50 dark:bg-gray-900 min-h-screen">
     <div class="container mx-auto px-4 py-8 max-w-7xl">
+        @php
+            $appVersion = config('nativephp.version', '0.0.0');
+        @endphp
+
         <!-- Header -->
-        <div class="mb-8">
-            <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">Sistema de Apostas em Corridas</h1>
-            <p class="text-gray-600 dark:text-gray-400">Gerencie corridas, apostadores e apostas</p>
+        <div class="mb-8 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">Sistema de Apostas em Corridas</h1>
+                <p class="text-gray-600 dark:text-gray-400">Gerencie corridas, apostadores e apostas</p>
+            </div>
+            <div class="shrink-0 text-sm text-gray-500 dark:text-gray-400 sm:text-right">
+                <span class="inline-flex items-center gap-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-1.5">
+                    Versão
+                    <strong id="app-version-label" class="text-gray-900 dark:text-white font-semibold">{{ $appVersion }}</strong>
+                </span>
+            </div>
+        </div>
+
+        <!-- Aviso: atualização instalada automaticamente -->
+        <div id="banner-update-installed" class="hidden mb-6 bg-emerald-50 border border-emerald-300 text-emerald-800 dark:bg-emerald-900/30 dark:border-emerald-700 dark:text-emerald-200 px-4 py-3 rounded-lg" role="status">
+            <div class="flex items-start justify-between gap-4">
+                <div>
+                    <p class="font-semibold">Atualização instalada com sucesso</p>
+                    <p class="text-sm mt-1">O sistema foi atualizado automaticamente para a versão <strong id="banner-installed-version"></strong>.</p>
+                </div>
+                <button type="button" onclick="fecharBanner('banner-update-installed')" class="text-emerald-700 dark:text-emerald-300 hover:underline text-sm shrink-0">Fechar</button>
+            </div>
+        </div>
+
+        <!-- Aviso: baixando atualização -->
+        <div id="banner-update-downloading" class="hidden mb-6 bg-sky-50 border border-sky-300 text-sky-800 dark:bg-sky-900/30 dark:border-sky-700 dark:text-sky-200 px-4 py-3 rounded-lg" role="status">
+            <p class="font-semibold">Baixando atualização…</p>
+            <p class="text-sm mt-1">Progresso: <strong id="banner-download-percent">0</strong>%</p>
+            <div class="mt-2 h-2 rounded bg-sky-100 dark:bg-sky-950 overflow-hidden">
+                <div id="banner-download-bar" class="h-full bg-sky-500 transition-all duration-300" style="width: 0%"></div>
+            </div>
+        </div>
+
+        <!-- Aviso: atualização pronta para instalar -->
+        <div id="banner-update-ready" class="hidden mb-6 bg-amber-50 border border-amber-300 text-amber-900 dark:bg-amber-900/30 dark:border-amber-700 dark:text-amber-100 px-4 py-3 rounded-lg" role="status">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div>
+                    <p class="font-semibold">Nova versão pronta para instalar</p>
+                    <p class="text-sm mt-1">A versão <strong id="banner-ready-version"></strong> já foi baixada. Reinicie o aplicativo para concluir a atualização.</p>
+                </div>
+                <button
+                    type="button"
+                    id="btn-reiniciar-atualizar"
+                    onclick="reiniciarParaAtualizar()"
+                    class="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-medium transition-colors shrink-0">
+                    Reiniciar agora
+                </button>
+            </div>
         </div>
 
         @if(session('success'))
@@ -1161,6 +1210,114 @@
                 alert('Erro ao copiar. Tente selecionar o texto manualmente.');
             });
         }
+
+        // --- Versão / atualizações automáticas ---
+        const APP_VERSION = @json($appVersion);
+        const VERSION_STORAGE_KEY = 'sistema_apostas_last_seen_version';
+        const READY_VERSION_KEY = 'sistema_apostas_update_ready_version';
+        const CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
+        function fecharBanner(id) {
+            document.getElementById(id)?.classList.add('hidden');
+        }
+
+        function mostrarBanner(id) {
+            document.getElementById(id)?.classList.remove('hidden');
+        }
+
+        function detectarVersaoRecemInstalada() {
+            try {
+                const anterior = localStorage.getItem(VERSION_STORAGE_KEY);
+                const pronta = localStorage.getItem(READY_VERSION_KEY);
+
+                if (anterior && anterior !== APP_VERSION) {
+                    const versaoEl = document.getElementById('banner-installed-version');
+                    if (versaoEl) versaoEl.textContent = APP_VERSION;
+                    mostrarBanner('banner-update-installed');
+                } else if (pronta && pronta === APP_VERSION) {
+                    // Atualização aplicada após reinício
+                    const versaoEl = document.getElementById('banner-installed-version');
+                    if (versaoEl) versaoEl.textContent = APP_VERSION;
+                    mostrarBanner('banner-update-installed');
+                }
+
+                localStorage.setItem(VERSION_STORAGE_KEY, APP_VERSION);
+                if (pronta && pronta === APP_VERSION) {
+                    localStorage.removeItem(READY_VERSION_KEY);
+                }
+            } catch (e) {
+                // localStorage indisponível
+            }
+        }
+
+        function avisarUpdatePronta(version) {
+            const versaoEl = document.getElementById('banner-ready-version');
+            if (versaoEl) versaoEl.textContent = version || '';
+            fecharBanner('banner-update-downloading');
+            mostrarBanner('banner-update-ready');
+            try {
+                if (version) localStorage.setItem(READY_VERSION_KEY, version);
+            } catch (e) {}
+        }
+
+        function atualizarProgressoDownload(percent) {
+            const pct = Math.max(0, Math.min(100, Math.round(percent || 0)));
+            const pctEl = document.getElementById('banner-download-percent');
+            const barEl = document.getElementById('banner-download-bar');
+            if (pctEl) pctEl.textContent = String(pct);
+            if (barEl) barEl.style.width = pct + '%';
+            mostrarBanner('banner-update-downloading');
+        }
+
+        async function reiniciarParaAtualizar() {
+            const btn = document.getElementById('btn-reiniciar-atualizar');
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = 'Reiniciando…';
+            }
+            try {
+                await fetch(@json(route('app.updates.quit-and-install')), {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': CSRF_TOKEN || '',
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                    },
+                });
+            } catch (e) {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.textContent = 'Reiniciar agora';
+                }
+                alert('Não foi possível reiniciar. Feche e abra o aplicativo manualmente.');
+            }
+        }
+
+        function registrarListenersAtualizacao() {
+            if (typeof window.Native === 'undefined' || typeof window.Native.on !== 'function') {
+                return;
+            }
+
+            window.Native.on('Native\\Desktop\\Events\\AutoUpdater\\UpdateAvailable', (payload) => {
+                atualizarProgressoDownload(0);
+                const versao = payload?.version;
+                if (versao) {
+                    const pctEl = document.getElementById('banner-download-percent');
+                    if (pctEl) pctEl.textContent = '0';
+                }
+            });
+
+            window.Native.on('Native\\Desktop\\Events\\AutoUpdater\\DownloadProgress', (payload) => {
+                atualizarProgressoDownload(payload?.percent ?? 0);
+            });
+
+            window.Native.on('Native\\Desktop\\Events\\AutoUpdater\\UpdateDownloaded', (payload) => {
+                avisarUpdatePronta(payload?.version);
+            });
+        }
+
+        detectarVersaoRecemInstalada();
+        registrarListenersAtualizacao();
     </script>
 </body>
 
