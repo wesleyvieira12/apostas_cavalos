@@ -6,7 +6,7 @@ return [
      * It is used to determine if the app needs to be updated.
      * Increment this value every time you release a new version of your app.
      */
-    'version' => env('NATIVEPHP_APP_VERSION', '1.0.3'),
+    'version' => env('NATIVEPHP_APP_VERSION', '1.0.5'),
 
     /**
      * The ID of your application. This should be a unique identifier
@@ -62,6 +62,7 @@ return [
         'AWS_*',
         'AZURE_*',
         'GITHUB_*',
+        'GH_TOKEN',
         'DO_SPACES_*',
         '*_SECRET',
         'BIFROST_*',
@@ -97,24 +98,24 @@ return [
          * updater will only work when your application is bundled
          * for production.
          */
-        'enabled' => env('NATIVEPHP_UPDATER_ENABLED', false),
+        'enabled' => env('NATIVEPHP_UPDATER_ENABLED', true),
 
         /**
          * The updater provider to use.
          * Supported: "github", "s3", "spaces"
          */
-        'default' => env('NATIVEPHP_UPDATER_PROVIDER', 'spaces'),
+        'default' => env('NATIVEPHP_UPDATER_PROVIDER', 'github'),
 
         'providers' => [
             'github' => [
                 'driver' => 'github',
-                'repo' => env('GITHUB_REPO'),
-                'owner' => env('GITHUB_OWNER'),
+                'repo' => env('GITHUB_REPO', 'apostas_cavalos'),
+                'owner' => env('GITHUB_OWNER', 'wesleyvieira12'),
                 'token' => env('GITHUB_TOKEN'),
                 'vPrefixedTagName' => env('GITHUB_V_PREFIXED_TAG_NAME', true),
                 'private' => env('GITHUB_PRIVATE', false),
                 'channel' => env('GITHUB_CHANNEL', 'latest'),
-                'releaseType' => env('GITHUB_RELEASE_TYPE', 'draft'),
+                'releaseType' => env('GITHUB_RELEASE_TYPE', 'release'),
             ],
 
             's3' => [

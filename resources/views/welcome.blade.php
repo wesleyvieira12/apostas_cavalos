@@ -206,9 +206,11 @@
                     })->sortBy('nome')->values();
                     
                     // Gerar texto formatado
-                    // Calcular largura total (aproximadamente 45 caracteres para alinhar com "Á pagar:")
-                    $larguraTotal = 45;
-                    $textoWhatsApp = "Apostadores:                           Á pagar:\n\n";
+                    $larguraTotal = 28;
+                    $cabecalhoEsq = "Apostadores:";
+                    $cabecalhoDir = "Á pagar:";
+                    $espacosCabecalho = str_repeat(' ', max(1, $larguraTotal - mb_strlen($cabecalhoEsq) - mb_strlen($cabecalhoDir)));
+                    $textoWhatsApp = $cabecalhoEsq . $espacosCabecalho . $cabecalhoDir . "\n\n";
                     foreach($apostadoresComTotal as $item) {
                         $nome = $item['nome'];
                         $total = number_format($item['total'], 2, ',', '.');
@@ -326,10 +328,10 @@
                     }
                     
                     // Gerar texto formatado para copiar
-                    $larguraTotal = 45;
+                    $larguraTotal = 28;
                     $textoPremios = "Prêmios por animal\n\n\n";
                     foreach($premiosPorAnimal as $animal => $apostadores) {
-                        $textoPremios .= "Animal " . $animal . "\n";
+                        $textoPremios .= "*Animal " . $animal . "*\n";
                         
                         // Calcular alinhamento do cabeçalho "Prêmio" para ficar alinhado com os valores R$
                         $textoCabecalhoApostador = "Apostador";
@@ -344,8 +346,10 @@
                         $espacosCabecalho = str_repeat(' ', max(1, $posicaoInicioPremio - $tamanhoCabecalhoApostador));
                         $textoPremios .= $textoCabecalhoApostador . $espacosCabecalho . $textoCabecalhoPremio . "\n";
                         
+                        $totalAnimal = 0;
                         foreach($apostadores as $dados) {
                             $nome = $dados['nome'];
+                            $totalAnimal += $dados['premio'];
                             $premio = number_format($dados['premio'], 2, ',', '.');
                             $textoValor = "R$" . $premio;
                             $tamanhoNome = mb_strlen($nome);
@@ -355,6 +359,11 @@
                             $tracos = str_repeat('-', $tracosNecessarios);
                             $textoPremios .= $nome . $tracos . ">" . $textoValor . "\n";
                         }
+
+                        $textoTotalLabel = "TOTAL";
+                        $textoTotalValor = "R$" . number_format($totalAnimal, 2, ',', '.');
+                        $tracosTotal = str_repeat('-', max(1, $larguraTotal - mb_strlen($textoTotalLabel) - mb_strlen($textoTotalValor) - 1));
+                        $textoPremios .= "\n*" . $textoTotalLabel . "*" . $tracosTotal . ">*" . $textoTotalValor . "*\n";
                         $textoPremios .= "\n\n";
                     }
                 @endphp

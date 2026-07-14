@@ -1,59 +1,138 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Sistema de Apostas de Cavalos
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Aplicação desktop (NativePHP) / Laravel para controle de corridas, apostas, apostadores e distribuição de prêmios.
 
-## About Laravel
+## Requisitos
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- PHP **8.3+**
+- [Composer](https://getcomposer.org/)
+- Node.js **22+** e npm
+- Extensões PHP: `mbstring`, `pdo_sqlite`, `openssl`, `fileinfo`, `zip`
+- (Opcional, para app desktop) NativePHP Desktop — instalado via Composer
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Como executar o sistema
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+### 1. Instalar dependências
 
-## Learning Laravel
+```bash
+composer install
+npm install
+```
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+### 2. Configurar ambiente
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+```bash
+cp .env.example .env
+php artisan key:generate
+```
 
-## Laravel Sponsors
+Confira no `.env`:
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+| Variável | Descrição |
+|----------|-----------|
+| `DB_CONNECTION=sqlite` | Banco padrão do projeto |
+| `DB_DATABASE=database/nativephp.sqlite` | Caminho do SQLite |
 
-### Premium Partners
+Crie o arquivo do banco se ainda não existir:
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+```bash
+touch database/nativephp.sqlite
+php artisan migrate
+```
 
-## Contributing
+### 3. Rodar em desenvolvimento
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+**App desktop (recomendado):**
 
-## Code of Conduct
+```bash
+composer native:dev
+```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+Isso sobe o NativePHP (`php artisan native:run`) e o Vite em paralelo.
 
-## Security Vulnerabilities
+**Ou só pelo navegador:**
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+```bash
+composer dev
+```
 
-## License
+Acesse `http://localhost:8000`.
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+### Setup rápido (alternativa)
+
+```bash
+composer setup
+```
+
+Executa install, `.env`, key, migrate e build do frontend de uma vez.
+
+---
+
+## Gerar uma versão nova
+
+A cada release, a versão precisa subir. O updater compara essa versão com a instalada nos clientes.
+
+### 1. Incrementar a versão
+
+Altere nos dois lugares (mantenha o mesmo valor):
+
+- `.env` → `NATIVEPHP_APP_VERSION=1.0.6`
+- `config/nativephp.php` → fallback `'version' => env('NATIVEPHP_APP_VERSION', '1.0.6')`
+
+### 2. Garantir configuração do updater
+
+No `.env` (já espelhado no `.env.example`):
+
+```env
+NATIVEPHP_UPDATER_ENABLED=true
+NATIVEPHP_UPDATER_PROVIDER=github
+GITHUB_OWNER=wesleyvieira12
+GITHUB_REPO=apostas_cavalos
+GITHUB_PRIVATE=false
+GITHUB_V_PREFIXED_TAG_NAME=true
+GITHUB_RELEASE_TYPE=release
+GITHUB_TOKEN=seu_token_aqui
+```
+
+O `GITHUB_TOKEN` precisa de permissão para criar/atualizar Releases no repositório. Ele **não** vai no pacote final do app (é removido no build).
+
+### 3. Build dos assets
+
+```bash
+npm run build
+```
+
+### 4. Publicar a versão (obrigatório para atualizar clientes)
+
+`native:build` só gera o instalável localmente.  
+Para a atualização automática chegar aos usuários, use **`native:publish`**:
+
+```bash
+# Windows
+php artisan native:publish win
+
+# macOS / Linux (quando aplicável)
+php artisan native:publish mac
+php artisan native:publish linux
+```
+
+Isso faz o build **e** envia os artefatos para o GitHub Releases (tag `v1.0.6`, por exemplo).
+
+### 5. Via CI (GitHub Actions)
+
+Ao dar push na branch `master` (ou disparar o workflow manualmente), o job `.github/workflows/nativephp-windows.yml`:
+
+1. Lê a versão do `config/nativephp.php`
+2. Configura o updater com GitHub
+3. Roda `php artisan native:publish win`
+4. Publica a release e sobe o artifact do build
+
+### Checklist rápido de release
+
+1. [ ] Subir `NATIVEPHP_APP_VERSION` (`.env` + `config/nativephp.php`)
+2. [ ] `GITHUB_TOKEN` válido no `.env` (ou secrets no Actions)
+3. [ ] `npm run build`
+4. [ ] `php artisan native:publish win` **ou** push em `master`
+5. [ ] Conferir a release no GitHub
+
+> **Importante:** só `native:build` não publica update. Clientes com o app instalado só atualizam se a release existir no GitHub com versão maior que a instalada.
